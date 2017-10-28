@@ -1,7 +1,11 @@
 package com.example.opencvdemoattempt2;
 
+import android.Manifest;
+import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import android.support.v4.app.ActivityCompat;
+import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.util.Log;
@@ -11,11 +15,8 @@ import org.opencv.android.BaseLoaderCallback;
 import org.opencv.android.LoaderCallbackInterface;
 import org.opencv.android.OpenCVLoader;
 import org.opencv.android.Utils;
-import org.opencv.core.Core;
 import org.opencv.core.CvType;
 import org.opencv.core.Mat;
-import org.opencv.core.Point;
-import org.opencv.core.Scalar;
 import org.opencv.imgproc.Imgproc;
 
 import java.io.File;
@@ -23,6 +24,8 @@ import java.io.File;
 
 public class MainActivity extends AppCompatActivity {
     private static final String TAG = "MainActivity";
+    private static final int REQUEST_READ_EXTERNAL_STORAGE = 666;
+    private static boolean permissionWasGranted = false;
 
     static {
         if (!OpenCVLoader.initDebug()) {
@@ -36,6 +39,45 @@ public class MainActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+
+        if (ContextCompat.checkSelfPermission(MainActivity.this,
+                Manifest.permission.READ_EXTERNAL_STORAGE)
+                != PackageManager.PERMISSION_GRANTED) {
+
+                ActivityCompat.requestPermissions(MainActivity.this,
+                        new String[]{Manifest.permission.READ_EXTERNAL_STORAGE},
+                        REQUEST_READ_EXTERNAL_STORAGE);
+
+        } else {
+            permissionWasGranted = true;
+        }
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode,
+                                           String permissions[], int[] grantResults) {
+        switch (requestCode) {
+            case REQUEST_READ_EXTERNAL_STORAGE: {
+                // If request is cancelled, the result arrays are empty.
+                if (grantResults.length > 0
+                        && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                    permissionWasGranted = true;
+                    Log.d(TAG, "READ_EXTERNAL_STORAGE permission was granted");
+                    // permission was granted, yay! Do the
+                    // contacts-related task you need to do.
+
+                } else {
+                    permissionWasGranted = false;
+                    Log.d(TAG, "READ_EXTERNAL_STORAGE permission was denied");
+                    // permission denied, boo! Disable the
+                    // functionality that depends on this permission.
+                }
+                return;
+            }
+
+            // other 'case' lines to check for other
+            // permissions this app might request
+        }
     }
 
    private BaseLoaderCallback mLoaderCallback = new BaseLoaderCallback(this) {
@@ -64,7 +106,7 @@ public class MainActivity extends AppCompatActivity {
         Bitmap inputBitmap = null;
         Bitmap outputBitmap;
 
-        if(imgFile.exists()) {
+        if(permissionWasGranted && imgFile.exists()) {
             inputBitmap = BitmapFactory.decodeFile(imgFile.getAbsolutePath());
 
             m = new Mat (inputBitmap.getWidth(), inputBitmap.getHeight(), CvType.CV_8UC3);
