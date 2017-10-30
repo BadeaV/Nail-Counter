@@ -101,8 +101,8 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public void readFile() {
-        File imgFile = new File("/storage/emulated/0/DCIM/Camera/test.jpg");
-        Mat m;
+        File imgFile = new File("/storage/emulated/0/DCIM/Camera/water_coins.jpg");
+        Mat m, imgThreshold;
         Bitmap inputBitmap = null;
         Bitmap outputBitmap;
 
@@ -110,13 +110,15 @@ public class MainActivity extends AppCompatActivity {
             inputBitmap = BitmapFactory.decodeFile(imgFile.getAbsolutePath());
 
             m = new Mat (inputBitmap.getWidth(), inputBitmap.getHeight(), CvType.CV_8UC3);
+            imgThreshold = new Mat (inputBitmap.getWidth(), inputBitmap.getHeight(), CvType.CV_8UC3);
             Utils.bitmapToMat(inputBitmap, m);
 
             //do something
             Imgproc.cvtColor(m, m, Imgproc.COLOR_RGB2GRAY);
+            Imgproc.threshold(m, imgThreshold, 0, 255, Imgproc.THRESH_BINARY + Imgproc.THRESH_OTSU);
 
             outputBitmap = Bitmap.createBitmap(m.cols(), m.rows(), Bitmap.Config.ARGB_8888);
-            Utils.matToBitmap(m, outputBitmap);
+            Utils.matToBitmap(imgThreshold, outputBitmap);
             ImageView iv = (ImageView) findViewById(R.id.imageView1);
             iv.setImageBitmap(outputBitmap);
         }
