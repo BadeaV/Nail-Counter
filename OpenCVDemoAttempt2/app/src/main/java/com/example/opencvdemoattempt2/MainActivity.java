@@ -114,8 +114,8 @@ public class MainActivity extends AppCompatActivity {
             Utils.bitmapToMat(inputBitmap, m);
 
             //do something
-            Imgproc.cvtColor(m, m, Imgproc.COLOR_RGB2GRAY);
-            Imgproc.threshold(m, imgThreshold, 0, 255, Imgproc.THRESH_BINARY + Imgproc.THRESH_OTSU);
+            Imgproc.cvtColor(m, m, Imgproc.COLOR_BGR2GRAY);
+            Imgproc.threshold(m, imgThreshold, 0, 255, Imgproc.THRESH_BINARY_INV + Imgproc.THRESH_OTSU);
 
             outputBitmap = Bitmap.createBitmap(m.cols(), m.rows(), Bitmap.Config.ARGB_8888);
             Utils.matToBitmap(imgThreshold, outputBitmap);
