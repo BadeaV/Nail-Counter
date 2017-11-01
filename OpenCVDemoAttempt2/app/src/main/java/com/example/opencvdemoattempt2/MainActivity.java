@@ -15,11 +15,16 @@ import org.opencv.android.BaseLoaderCallback;
 import org.opencv.android.LoaderCallbackInterface;
 import org.opencv.android.OpenCVLoader;
 import org.opencv.android.Utils;
+import org.opencv.core.Core;
 import org.opencv.core.CvType;
 import org.opencv.core.Mat;
+import org.opencv.core.Point;
+import org.opencv.core.Scalar;
 import org.opencv.imgproc.Imgproc;
 
 import java.io.File;
+
+import static org.opencv.core.Core.minMaxLoc;
 
 
 public class MainActivity extends AppCompatActivity {
@@ -102,23 +107,40 @@ public class MainActivity extends AppCompatActivity {
 
     public void readFile() {
         File imgFile = new File("/storage/emulated/0/DCIM/Camera/water_coins.jpg");
-        Mat m, imgThreshold;
+        Mat img, gray, thresh, kernel, opening, sure_bg, dist_transform;
         Bitmap inputBitmap = null;
         Bitmap outputBitmap;
 
         if(permissionWasGranted && imgFile.exists()) {
             inputBitmap = BitmapFactory.decodeFile(imgFile.getAbsolutePath());
 
-            m = new Mat (inputBitmap.getWidth(), inputBitmap.getHeight(), CvType.CV_8UC3);
-            imgThreshold = new Mat (inputBitmap.getWidth(), inputBitmap.getHeight(), CvType.CV_8UC3);
-            Utils.bitmapToMat(inputBitmap, m);
+            img = new Mat (inputBitmap.getWidth(), inputBitmap.getHeight(), CvType.CV_8UC3);
+            gray = new Mat (inputBitmap.getWidth(), inputBitmap.getHeight(), CvType.CV_8UC1);
+            thresh = new Mat (inputBitmap.getWidth(), inputBitmap.getHeight(), CvType.CV_8UC1);
+            opening = new Mat (inputBitmap.getWidth(), inputBitmap.getHeight(), CvType.CV_8UC1);
+            sure_bg = new Mat (inputBitmap.getWidth(), inputBitmap.getHeight(), CvType.CV_8UC1);
+            dist_transform = new Mat (inputBitmap.getWidth(), inputBitmap.getHeight(), CvType.CV_32FC1);
 
-            //do something
-            Imgproc.cvtColor(m, m, Imgproc.COLOR_BGR2GRAY);
-            Imgproc.threshold(m, imgThreshold, 0, 255, Imgproc.THRESH_BINARY_INV + Imgproc.THRESH_OTSU);
+            Utils.bitmapToMat(inputBitmap, img);
 
-            outputBitmap = Bitmap.createBitmap(m.cols(), m.rows(), Bitmap.Config.ARGB_8888);
-            Utils.matToBitmap(imgThreshold, outputBitmap);
+            Imgproc.cvtColor(img, gray, Imgproc.COLOR_BGR2GRAY);
+            Imgproc.threshold(gray, thresh, 0, 255, Imgproc.THRESH_BINARY_INV + Imgproc.THRESH_OTSU);
+
+            //noise removal
+            kernel = new Mat(3, 3, CvType.CV_8UC1, new Scalar(1,1,1));
+            Imgproc.morphologyEx(thresh, opening, Imgproc.MORPH_OPEN, kernel, new Point(-1,-1), 2);
+
+            //sure background area
+            Imgproc.dilate(opening, sure_bg, kernel, new Point(-1,-1), 3);
+
+            //Finding sure foreground area
+            Imgproc.distanceTransform(opening, dist_transform, Imgproc.DIST_L2, 5);
+
+            Mat dist_transform_test = new Mat (inputBitmap.getWidth(), inputBitmap.getHeight(), CvType.CV_8UC1);
+            dist_transform.convertTo(dist_transform_test,  CvType.CV_8UC1);
+
+            outputBitmap = Bitmap.createBitmap(img.cols(), img.rows(), Bitmap.Config.ARGB_8888);
+            Utils.matToBitmap(dist_transform_test, outputBitmap);
             ImageView iv = (ImageView) findViewById(R.id.imageView1);
             iv.setImageBitmap(outputBitmap);
         }
