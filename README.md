@@ -1,5 +1,3 @@
-# test-repo
-just a test
-Hutzy
+# Nail Counter app
 
-Scriu ceva in el(Vlado San!)
+Attempt to use Watershed segmentation to count number of objects on a wooden background.
