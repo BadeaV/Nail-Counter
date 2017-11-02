@@ -116,6 +116,7 @@ public class MainActivity extends AppCompatActivity {
         Mat opening = new Mat();
         Mat sure_bg = new Mat();
         Mat dist_transform = new Mat();
+        Mat sure_fg = new Mat();
         Mat kernel;
 
         if(permissionWasGranted && imgFile.exists()) {
@@ -134,13 +135,15 @@ public class MainActivity extends AppCompatActivity {
             Imgproc.dilate(opening, sure_bg, kernel, new Point(-1,-1), 3);
 
             //Finding sure foreground area
-            Imgproc.distanceTransform(opening, dist_transform, Imgproc.DIST_L2, 5);
+            Imgproc.distanceTransform(opening, dist_transform, Imgproc.DIST_L2, Imgproc.DIST_MASK_5);
+            Imgproc.threshold(dist_transform, sure_fg, 0.7 * Core.minMaxLoc(dist_transform).maxVal, 255, Imgproc.THRESH_BINARY);
 
-            Mat dist_transform_test = new Mat (inputBitmap.getWidth(), inputBitmap.getHeight(), CvType.CV_8UC1);
-            dist_transform.convertTo(dist_transform_test,  CvType.CV_8UC1);
+            Mat test = new Mat();
+            Core.normalize(sure_fg, test, 0, 1, Core.NORM_MINMAX);
+            test.convertTo(test,  CvType.CV_8UC1, 255, 0);
 
             outputBitmap = Bitmap.createBitmap(img.cols(), img.rows(), Bitmap.Config.ARGB_8888);
-            Utils.matToBitmap(dist_transform_test, outputBitmap);
+            Utils.matToBitmap(test, outputBitmap);
             ImageView iv = (ImageView) findViewById(R.id.imageView1);
             iv.setImageBitmap(outputBitmap);
         }
