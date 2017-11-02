@@ -107,23 +107,23 @@ public class MainActivity extends AppCompatActivity {
 
     public void readFile() {
         File imgFile = new File("/storage/emulated/0/DCIM/Camera/water_coins.jpg");
-        Mat img, gray, thresh, kernel, opening, sure_bg, dist_transform;
-        Bitmap inputBitmap = null;
+        Bitmap inputBitmap;
         Bitmap outputBitmap;
+
+        Mat img = new Mat();
+        Mat gray = new Mat();
+        Mat thresh = new Mat();
+        Mat opening = new Mat();
+        Mat sure_bg = new Mat();
+        Mat dist_transform = new Mat();
+        Mat kernel;
 
         if(permissionWasGranted && imgFile.exists()) {
             inputBitmap = BitmapFactory.decodeFile(imgFile.getAbsolutePath());
 
-            img = new Mat (inputBitmap.getWidth(), inputBitmap.getHeight(), CvType.CV_8UC3);
-            gray = new Mat (inputBitmap.getWidth(), inputBitmap.getHeight(), CvType.CV_8UC1);
-            thresh = new Mat (inputBitmap.getWidth(), inputBitmap.getHeight(), CvType.CV_8UC1);
-            opening = new Mat (inputBitmap.getWidth(), inputBitmap.getHeight(), CvType.CV_8UC1);
-            sure_bg = new Mat (inputBitmap.getWidth(), inputBitmap.getHeight(), CvType.CV_8UC1);
-            dist_transform = new Mat (inputBitmap.getWidth(), inputBitmap.getHeight(), CvType.CV_32FC1);
-
             Utils.bitmapToMat(inputBitmap, img);
 
-            Imgproc.cvtColor(img, gray, Imgproc.COLOR_BGR2GRAY);
+            Imgproc.cvtColor(img, gray, Imgproc.COLOR_BGRA2GRAY);
             Imgproc.threshold(gray, thresh, 0, 255, Imgproc.THRESH_BINARY_INV + Imgproc.THRESH_OTSU);
 
             //noise removal
