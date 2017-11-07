@@ -117,6 +117,8 @@ public class MainActivity extends AppCompatActivity {
         Mat sure_bg = new Mat();
         Mat dist_transform = new Mat();
         Mat sure_fg = new Mat();
+        Mat unknown = new Mat();
+        Mat markers = new Mat();
         Mat kernel;
 
         if(permissionWasGranted && imgFile.exists()) {
@@ -124,7 +126,8 @@ public class MainActivity extends AppCompatActivity {
 
             Utils.bitmapToMat(inputBitmap, img);
 
-            Imgproc.cvtColor(img, gray, Imgproc.COLOR_BGRA2GRAY);
+            Imgproc.cvtColor(img, img, Imgproc.COLOR_BGRA2BGR);
+            Imgproc.cvtColor(img, gray, Imgproc.COLOR_BGR2GRAY);
             Imgproc.threshold(gray, thresh, 0, 255, Imgproc.THRESH_BINARY_INV + Imgproc.THRESH_OTSU);
 
             //noise removal
@@ -138,12 +141,33 @@ public class MainActivity extends AppCompatActivity {
             Imgproc.distanceTransform(opening, dist_transform, Imgproc.DIST_L2, Imgproc.DIST_MASK_5);
             Imgproc.threshold(dist_transform, sure_fg, 0.7 * Core.minMaxLoc(dist_transform).maxVal, 255, Imgproc.THRESH_BINARY);
 
-            Mat test = new Mat();
-            Core.normalize(sure_fg, test, 0, 1, Core.NORM_MINMAX);
-            test.convertTo(test,  CvType.CV_8UC1, 255, 0);
+            //Finding unknown region
+            sure_fg.convertTo(sure_fg, CvType.CV_8UC1);
+            Core.subtract(sure_bg, sure_fg, unknown);
+
+            //Marker labelling
+            Imgproc.connectedComponents(sure_fg, markers);
+            Log.d(TAG, "Objects found: " + Core.minMaxLoc(markers).maxVal);
+
+            //Add one to all labels so that sure background is not 0, but 1
+            Core.add(markers, new Scalar(1), markers);
+
+            //Marking the region of unknown with zero
+            for (int i = 0; i < markers.rows(); ++i)
+                for (int j = 0; j < markers.cols(); ++j)
+                    if (unknown.get(i, j)[0] == 255)
+                        markers.put(i, j, 0);
+
+            //Watershed application
+            Imgproc.watershed(img, markers);
+            double[] RED = {255, 0, 0};
+            for (int i = 0; i < markers.rows(); ++i)
+                for (int j = 0; j < markers.cols(); ++j)
+                    if (markers.get(i, j)[0] == -1)
+                        img.put(i, j, RED);
 
             outputBitmap = Bitmap.createBitmap(img.cols(), img.rows(), Bitmap.Config.ARGB_8888);
-            Utils.matToBitmap(test, outputBitmap);
+            Utils.matToBitmap(img, outputBitmap);
             ImageView iv = (ImageView) findViewById(R.id.imageView1);
             iv.setImageBitmap(outputBitmap);
         }
