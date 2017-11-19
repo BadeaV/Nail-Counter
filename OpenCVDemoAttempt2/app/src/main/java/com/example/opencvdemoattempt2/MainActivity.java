@@ -36,7 +36,7 @@ public class MainActivity extends AppCompatActivity {
     private static final int READ_REQUEST_CODE = 42;
 
     private static boolean permissionWasGranted = false;
-
+    private static boolean fileSearchPerformed = false;
 
     static {
         if (!OpenCVLoader.initDebug()) {
@@ -93,24 +93,12 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-   private BaseLoaderCallback mLoaderCallback = new BaseLoaderCallback(this) {
-        @Override
-        public void onManagerConnected(int status) {
-            if (status == LoaderCallbackInterface.SUCCESS ) {
-                // now we can call opencv code !
-               //TODO Handle this propperly
-            } else {
-                super.onManagerConnected(status);
-            }
-        }
-    };
-
     @Override
     public void onResume() {
         super.onResume();
-        OpenCVLoader.initAsync(OpenCVLoader.OPENCV_VERSION_2_4_5,this, mLoaderCallback);
-        // you may be tempted, to do something here, but it's *async*, and may take some time,
-        // so any opencv call here will lead to unresolved native errors.
+        if(!fileSearchPerformed) {
+            performFileSearch();
+        }
     }
 
     @Override
@@ -142,6 +130,7 @@ public class MainActivity extends AppCompatActivity {
      * Fires an intent to spin up the "file chooser" UI and select an image.
      */
     public void performFileSearch() {
+        fileSearchPerformed = true;
 
         // ACTION_OPEN_DOCUMENT is the intent to choose a file via the system's file
         // browser.
