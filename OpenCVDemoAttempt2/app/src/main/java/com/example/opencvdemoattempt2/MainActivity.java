@@ -5,11 +5,15 @@ import android.content.Intent;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.net.Uri;
+import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.ParcelFileDescriptor;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
+import android.view.View;
 import android.widget.ImageView;
+import android.widget.ProgressBar;
+import android.widget.TextView;
 
 import org.opencv.android.OpenCVLoader;
 import org.opencv.android.Utils;
@@ -28,7 +32,11 @@ public class MainActivity extends AppCompatActivity {
     private static final String TAG = "MainActivity";
     private static final int READ_REQUEST_CODE = 666;
 
-    private static boolean fileSearchPerformed = false;
+    private static boolean shouldPerformFileSearch = true;
+
+    private ImageView mSegmentationResultsDisplay;
+    private TextView mErrorMessageDisplay;
+    private ProgressBar mLoadingIndicator;
 
     static {
         if (!OpenCVLoader.initDebug()) {
@@ -42,18 +50,24 @@ public class MainActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+
+        mSegmentationResultsDisplay = (ImageView) findViewById(R.id.iv_segmentation_results_display);
+        mErrorMessageDisplay = (TextView) findViewById(R.id.tv_error_message_display);
+        mLoadingIndicator = (ProgressBar) findViewById(R.id.pb_loading_indicator);
     }
 
     @Override
     public void onResume() {
         super.onResume();
-        if(!fileSearchPerformed) {
+        if(shouldPerformFileSearch) {
             performFileSearch();
         }
+        shouldPerformFileSearch = true;
     }
 
     @Override
     public void onActivityResult(int requestCode, int resultCode, Intent resultData) {
+        shouldPerformFileSearch = false;
 
         // The ACTION_OPEN_DOCUMENT intent was sent with the request code
         // READ_REQUEST_CODE. If the request code seen here doesn't match, it's the
@@ -67,12 +81,7 @@ public class MainActivity extends AppCompatActivity {
             Uri uri = null;
             if (resultData != null) {
                 uri = resultData.getData();
-                Log.i(TAG, "Uri: " + uri.toString());
-                try {
-                    segmentBmp(getBitmapFromUri(uri));
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
+                new OpenCVTask().execute(uri);
             }
         }
     }
@@ -81,8 +90,6 @@ public class MainActivity extends AppCompatActivity {
      * Fires an intent to spin up the "file chooser" UI and select an image.
      */
     public void performFileSearch() {
-        fileSearchPerformed = true;
-
         // ACTION_OPEN_DOCUMENT is the intent to choose a file via the system's file
         // browser.
         Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
@@ -109,7 +116,7 @@ public class MainActivity extends AppCompatActivity {
         return image;
     }
 
-    public void segmentBmp(Bitmap inputBitmap) {
+    public Bitmap segmentBmp(Bitmap inputBitmap) {
         Bitmap outputBitmap;
 
         Mat img = new Mat();
@@ -167,7 +174,52 @@ public class MainActivity extends AppCompatActivity {
 
         outputBitmap = Bitmap.createBitmap(img.cols(), img.rows(), Bitmap.Config.ARGB_8888);
         Utils.matToBitmap(img, outputBitmap);
-        ImageView iv = (ImageView) findViewById(R.id.imageView1);
-        iv.setImageBitmap(outputBitmap);
+
+        return outputBitmap;
+    }
+
+    private void showSegmentationResultsView() {
+        mErrorMessageDisplay.setVisibility(View.INVISIBLE);
+        mSegmentationResultsDisplay.setVisibility(View.VISIBLE);
+    }
+
+    private void showErrorMessage() {
+        mSegmentationResultsDisplay.setVisibility(View.INVISIBLE);
+        mErrorMessageDisplay.setVisibility(View.VISIBLE);
+    }
+
+    public class OpenCVTask extends AsyncTask<Uri, Void, Bitmap> {
+
+        @Override
+        protected void onPreExecute() {
+            super.onPreExecute();
+            mLoadingIndicator.setVisibility(View.VISIBLE);
+        }
+
+        @Override
+        protected Bitmap doInBackground(Uri... params) {
+            Uri uri = params[0];
+            Bitmap segmentedImage = null;
+
+            try {
+                segmentedImage = segmentBmp(getBitmapFromUri(uri));
+                return segmentedImage;
+            } catch (IOException e) {
+                e.printStackTrace();
+                return null;
+            }
+        }
+
+        @Override
+        protected void onPostExecute(Bitmap segmentedImage) {
+            mLoadingIndicator.setVisibility(View.INVISIBLE);
+
+            if (segmentedImage != null) {
+                showSegmentationResultsView();
+                mSegmentationResultsDisplay.setImageBitmap(segmentedImage);
+            } else {
+                showErrorMessage();
+            }
+        }
     }
 }
